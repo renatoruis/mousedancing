@@ -40,6 +40,19 @@ Na **[Releases](https://github.com/renatoruis/mousedancing/releases)** descarreg
 
 O pacote de distribuição é um **instalador `.exe`** (NSIS). **Não há `.msi`** neste repositório.
 
+### Publicar uma release (mantenedores)
+
+Push para `main` **não** cria release nem anexa binários. Para publicar (ex.: `v0.0.1`):
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+O workflow em Windows compila, gera o instalador e **cria a release no GitHub** com `mousedancing.exe` e `MouseDancing-Setup.exe`. Usa tags **`v*`** (`v1.0.0`, `v0.0.1`, …).
+
+Podes também criar uma release na [página de Releases](https://github.com/renatoruis/mousedancing/releases) e publicar — o mesmo workflow anexa os ficheiros ao evento `release`.
+
 ## Versão portátil
 
 Na mesma release: **`mousedancing.exe`** — copiar e executar; **não** regista início automático.
