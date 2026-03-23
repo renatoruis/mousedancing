@@ -26,7 +26,7 @@
 #define ID_MENU_EXIT 1
 
 /* Alinhar com releases / instalador quando atualizares */
-#define MOUSE_DANCING_VERSION L"0.0.1"
+#define MOUSE_DANCING_VERSION L"0.0.3"
 
 static NOTIFYICONDATAW g_nid;
 static BOOL g_trayIconMustDestroy;

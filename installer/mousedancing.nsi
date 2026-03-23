@@ -5,7 +5,7 @@ Unicode true
 RequestExecutionLevel user
 
 !ifndef APP_VERSION
-  !define APP_VERSION "1.0.0"
+  !define APP_VERSION "0.0.3"
 !endif
 
 !define APP_NAME "Mouse Dancing"
