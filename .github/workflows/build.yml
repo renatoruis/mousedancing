@@ -14,22 +14,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compile (MSVC)
+      - name: Versão (tag ou build)
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref }}"
+          if ($ref -match '^refs/tags/v(.+)$') {
+            $v = $Matches[1]
+          } else {
+            $v = "0.0.${{ github.run_number }}"
+          }
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Compilar aplicação (MSVC)
         shell: cmd
         run: |
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat"
           cl /nologo /O2 /W3 /Fe:mousedancing.exe main.c /link /SUBSYSTEM:WINDOWS user32.lib shell32.lib
 
-      - name: Upload artifact
+      - name: Instalar NSIS
+        run: choco install nsis -y
+
+      - name: Criar instalador (MouseDancing-Setup.exe)
+        shell: cmd
+        run: |
+          copy /Y mousedancing.exe installer\
+          set "PATH=%PATH%;C:\Program Files (x86)\NSIS"
+          cd installer
+          makensis /DAPP_VERSION=${{ steps.ver.outputs.VERSION }} mousedancing.nsi
+          if not exist MouseDancing-Setup.exe exit /b 1
+          cd ..
+
+      - name: Artefactos (portátil + instalador)
         uses: actions/upload-artifact@v4
         with:
           name: mousedancing-win64
-          path: mousedancing.exe
+          path: |
+            mousedancing.exe
+            installer/MouseDancing-Setup.exe
 
-      - name: Upload release asset
+      - name: Anexar à release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: mousedancing.exe
+          files: |
+            mousedancing.exe
+            installer/MouseDancing-Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

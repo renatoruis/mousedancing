@@ -6,12 +6,27 @@ Foi criada **apenas** com esse propósito: evitar que o PC entre em bloqueio/pau
 
 **Aviso:** não substitui políticas de segurança da empresa nem garante que o ecrã ou a sessão nunca bloqueiem — depende das definições do Windows e da rede.
 
-## Como usar
+## Download (recomendado)
 
-1. Compila no Windows (ver abaixo) ou faz download do **ficheiro da [Releases](https://github.com/renatoruis/mousedancing/releases)**.
-2. Executa `mousedancing.exe`.
-3. Aparece um **ícone junto ao relógio** (área de notificação) a indicar que está em execução.
-4. Clica com o **botão direito** no ícone e escolhe **Sair** para terminar.
+Na página **[Releases](https://github.com/renatoruis/mousedancing/releases)** faz download do **`MouseDancing-Setup.exe`**.
+
+- Instala o programa em `%LOCALAPPDATA%\MouseDancing`
+- **Adiciona à inicialização automática do Windows** (apenas para o teu utilizador)
+- Regista entrada em **Definições → Aplicações → Aplicações instaladas** para desinstalar
+- No fim da instalação, **inicia** a aplicação (ícone junto ao relógio)
+
+O formato da release é um **instalador `.exe`** (NSIS). **Não há ficheiro `.msi`** neste repositório; o instalador `.exe` cumpre o mesmo papel para instalação e desinstalação.
+
+## Versão portátil (sem instalador)
+
+Na mesma release podes descarregar **`mousedancing.exe`** — executável único, sem registo na inicialização. Basta copiar e correr.
+
+## Uso diário
+
+1. Com o programa a correr, aparece um **ícone junto ao relógio**.
+2. **Botão direito** no ícone → **Sair** para terminar.
+
+Para remover a instalação feita pelo Setup: **Definições → Aplicações** → Mouse Dancing → **Desinstalar**.
 
 ## Compilar (sem dependências em runtime)
 
@@ -21,8 +36,14 @@ Na pasta do projeto, no Windows:
 build.bat
 ```
 
-É necessário **Visual Studio** (`cl` no PATH) ou **MinGW-w64** (`gcc` no PATH), ambos em modo 64 bits.
+Gera `mousedancing.exe`. É necessário **Visual Studio** (`cl` no PATH) ou **MinGW-w64** (`gcc` no PATH), ambos em modo 64 bits.
+
+### Criar o instalador localmente
+
+1. Instala o [NSIS](https://nsis.sourceforge.io/Download).
+2. Coloca `mousedancing.exe` na pasta `installer\` (ou copia a partir da raiz após `build.bat`).
+3. Executa `installer\build-installer.bat` (ajusta `APP_VERSION` no `.bat` se quiseres).
 
 ## Licença
 
-Uso livre. O código é simples e autónomo (apenas APIs Win32).
+Uso livre. O código da aplicação é simples e autónomo (apenas APIs Win32); o instalador é um script NSIS.
