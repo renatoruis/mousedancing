@@ -8,7 +8,7 @@ REM shell32: ícone na bandeja (Shell_NotifyIcon).
 where cl >nul 2>&1
 if %ERRORLEVEL%==0 (
   echo [build] Usando MSVC cl...
-  cl /nologo /O2 /W3 /DUNICODE /D_UNICODE /D_WIN32_WINNT=0x0600 /Fe:mousedancing.exe main.c /link /SUBSYSTEM:WINDOWS user32.lib shell32.lib
+  cl /nologo /O2 /W3 /utf-8 /DUNICODE /D_UNICODE /D_WIN32_WINNT=0x0600 /Fe:mousedancing.exe main.c /link /SUBSYSTEM:WINDOWS user32.lib shell32.lib
   if %ERRORLEVEL% neq 0 exit /b 1
   del main.obj 2>nul
   echo OK: mousedancing.exe
@@ -18,7 +18,7 @@ if %ERRORLEVEL%==0 (
 where gcc >nul 2>&1
 if %ERRORLEVEL%==0 (
   echo [build] Usando MinGW-w64 gcc...
-  gcc -O2 -mwindows -municode -DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0600 -o mousedancing.exe main.c -luser32 -lshell32 -m64
+  gcc -O2 -mwindows -municode -DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0600 -finput-charset=UTF-8 -o mousedancing.exe main.c -luser32 -lshell32 -m64
   if %ERRORLEVEL% neq 0 exit /b 1
   echo OK: mousedancing.exe
   exit /b 0

@@ -71,7 +71,7 @@ Na raiz do projeto, no Windows:
 build.bat
 ```
 
-Gera `mousedancing.exe`. É preciso **Visual Studio** (`cl`) ou **MinGW-w64** (`gcc`), **64 bits**.
+Gera `mousedancing.exe`. É preciso **Visual Studio** (`cl`) ou **MinGW-w64** (`gcc`), **64 bits**. O `build.bat` usa **`/utf-8`** no MSVC e charset UTF-8 no GCC para textos em português (acentos) aparecerem bem.
 
 Em releases, alinha a macro **`MOUSE_DANCING_VERSION`** em `main.c` com a tag (ex.: `v0.0.2` → `L"0.0.2"`).
 

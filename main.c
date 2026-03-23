@@ -76,19 +76,20 @@ static void RemoveTrayIcon(HWND hwnd) {
 static void ShowAbout(HWND hwnd) {
     wchar_t buf[768];
 
+    /* Literais em \\u — correctos em qualquer codepage do ficheiro; ver /utf-8 no build. */
 #if defined(_MSC_VER)
     swprintf_s(buf, 768,
-               L"Estado: em execução.\n\nVersão: %ls\n\n"
+               L"Estado: em execu\u00E7\u00E3o.\n\nVers\u00E3o: %ls\n\n"
                L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
-               L"automático do Windows por inatividade.\n\n"
-               L"Botão direito no ícone para Sair ou Sobre.",
+               L"autom\u00E1tico do Windows por inatividade.\n\n"
+               L"Bot\u00E3o direito no \u00EDcone para Sair ou Sobre.",
                MOUSE_DANCING_VERSION);
 #else
     swprintf(buf, 768,
-             L"Estado: em execução.\n\nVersão: %ls\n\n"
+             L"Estado: em execu\u00E7\u00E3o.\n\nVers\u00E3o: %ls\n\n"
              L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
-             L"automático do Windows por inatividade.\n\n"
-             L"Botão direito no ícone para Sair ou Sobre.",
+             L"autom\u00E1tico do Windows por inatividade.\n\n"
+             L"Bot\u00E3o direito no \u00EDcone para Sair ou Sobre.",
              MOUSE_DANCING_VERSION);
 #endif
     MessageBoxW(hwnd, buf, L"Mouse Dancing", MB_ICONINFORMATION | MB_OK);
@@ -106,7 +107,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = WM_TRAY;
         nid.hIcon = LoadTrayIcon();
-        wcsncpy(nid.szTip, L"Mouse Dancing — em execução (clique para informações)", 127);
+        wcsncpy(nid.szTip,
+                L"Mouse Dancing \u2014 em execu\u00E7\u00E3o (clique para informa\u00E7\u00F5es)",
+                127);
         nid.szTip[127] = L'\0';
         if (!Shell_NotifyIconW(NIM_ADD, &nid)) {
             if (g_trayIconMustDestroy && nid.hIcon) {
@@ -136,7 +139,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             if (!hMenu) {
                 break;
             }
-            AppendMenuW(hMenu, MF_STRING, ID_MENU_ABOUT, L"Sobre o Mouse Dancing…");
+            AppendMenuW(hMenu, MF_STRING, ID_MENU_ABOUT, L"Sobre o Mouse Dancing\u2026");
             AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
             AppendMenuW(hMenu, MF_STRING, ID_MENU_EXIT, L"Sair");
             SetForegroundWindow(hwnd);
