@@ -59,8 +59,8 @@ Na mesma release: **`mousedancing.exe`** — copiar e executar; **não** regista
 
 ## Uso
 
-1. **Ícone** na área de notificação → indica que está ativo  
-2. **Botão direito** no ícone → **Sair**  
+1. **Clique esquerdo** no ícone → janela **Sobre** (em execução + versão)  
+2. **Clique direito** → **Sobre o Mouse Dancing…** ou **Sair**  
 3. Instalação via Setup → **Desinstalar** em *Definições → Aplicações*
 
 ## Compilar (sem dependências em runtime)
@@ -72,6 +72,8 @@ build.bat
 ```
 
 Gera `mousedancing.exe`. É preciso **Visual Studio** (`cl`) ou **MinGW-w64** (`gcc`), **64 bits**.
+
+Em releases, alinha a macro **`MOUSE_DANCING_VERSION`** em `main.c` com a tag (ex.: `v0.0.2` → `L"0.0.2"`).
 
 ### Instalador local
 
