@@ -4,6 +4,8 @@
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+/* NOTIFYICONDATA / Shell_NotifyIcon — não vêm com LEAN_AND_MEAN sem shellapi.h */
+#include <shellapi.h>
 
 #define WM_TRAY (WM_USER + 100)
 #define ID_TIMER_JIGGLE 1
