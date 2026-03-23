@@ -24,7 +24,7 @@ Foi feita **só** para isso: leituras longas, chamadas, renders, ou qualquer tar
 
 | | |
 |---|---|
-| **Bandeja do sistema** | Ícone junto ao relógio com tooltip *Mouse Dancing — em execução* |
+| **Bandeja do sistema** | Ícone do sistema (timer/info); **clique esquerdo** abre “Sobre” com estado e versão; **clique direito** para Sobre ou Sair |
 | **Instalador** | `MouseDancing-Setup.exe` (NSIS): pasta em `%LOCALAPPDATA%`, **início automático**, entrada em *Aplicações instaladas* |
 | **Portátil** | `mousedancing.exe` — um ficheiro, sem instalador |
 | **Stack** | C, Win32 (`user32`, `shell32`), sem *runtime* extra |

@@ -1,18 +1,36 @@
 /*
  * Mouse Dancing — move o cursor 1px a cada 15s (ida e volta) e mostra ícone na bandeja.
- * Win32 apenas: user32 + shell32.
+ * Win32 apenas: user32 + shell32. Compilar sempre com UNICODE (ver build.bat).
  */
+#ifndef UNICODE
+#define UNICODE
+#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-/* NOTIFYICONDATA / Shell_NotifyIcon — não vêm com LEAN_AND_MEAN sem shellapi.h */
 #include <shellapi.h>
+#include <wchar.h>
+#if defined(__GNUC__) && !defined(_MSC_VER)
+#include <stdio.h>
+#endif
 
 #define WM_TRAY (WM_USER + 100)
 #define ID_TIMER_JIGGLE 1
+#define ID_MENU_ABOUT 2
 #define ID_MENU_EXIT 1
 
-static NOTIFYICONDATA g_nid;
-static const TCHAR kClassName[] = TEXT("MouseDancingTrayWnd");
+/* Alinhar com releases / instalador quando atualizares */
+#define MOUSE_DANCING_VERSION L"0.0.1"
+
+static NOTIFYICONDATAW g_nid;
+static BOOL g_trayIconMustDestroy;
+static const wchar_t kClassName[] = L"MouseDancingTrayWnd";
 
 static void JiggleOnce(void) {
     POINT pt;
@@ -25,24 +43,76 @@ static void JiggleOnce(void) {
     dir = -dir;
 }
 
+static HICON LoadTrayIcon(void) {
+    SHSTOCKICONINFO sii;
+
+    ZeroMemory(&sii, sizeof(sii));
+    sii.cbSize = sizeof(sii);
+    /* Ícone de “relógio” (timer) no Windows 10+; Win7 antigo pode falhar. */
+    if (SUCCEEDED(SHGetStockIconInfo((SHSTOCKICONID)101, SHGFI_ICON | SHGFI_SMALLICON, &sii))) {
+        g_trayIconMustDestroy = TRUE;
+        return sii.hIcon;
+    }
+    ZeroMemory(&sii, sizeof(sii));
+    sii.cbSize = sizeof(sii);
+    if (SUCCEEDED(SHGetStockIconInfo(SIID_INFO, SHGFI_ICON | SHGFI_SMALLICON, &sii))) {
+        g_trayIconMustDestroy = TRUE;
+        return sii.hIcon;
+    }
+    g_trayIconMustDestroy = FALSE;
+    return LoadIconW(NULL, (LPCWSTR)IDI_APPLICATION);
+}
+
 static void RemoveTrayIcon(HWND hwnd) {
     (void)hwnd;
-    Shell_NotifyIcon(NIM_DELETE, &g_nid);
+    Shell_NotifyIconW(NIM_DELETE, &g_nid);
+    if (g_trayIconMustDestroy && g_nid.hIcon) {
+        DestroyIcon(g_nid.hIcon);
+        g_trayIconMustDestroy = FALSE;
+    }
     ZeroMemory(&g_nid, sizeof(g_nid));
+}
+
+static void ShowAbout(HWND hwnd) {
+    wchar_t buf[768];
+
+#if defined(_MSC_VER)
+    swprintf_s(buf, 768,
+               L"Estado: em execução.\n\nVersão: %ls\n\n"
+               L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
+               L"automático do Windows por inatividade.\n\n"
+               L"Botão direito no ícone para Sair ou Sobre.",
+               MOUSE_DANCING_VERSION);
+#else
+    swprintf(buf, 768,
+             L"Estado: em execução.\n\nVersão: %ls\n\n"
+             L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
+             L"automático do Windows por inatividade.\n\n"
+             L"Botão direito no ícone para Sair ou Sobre.",
+             MOUSE_DANCING_VERSION);
+#endif
+    MessageBoxW(hwnd, buf, L"Mouse Dancing", MB_ICONINFORMATION | MB_OK);
 }
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_CREATE: {
-        NOTIFYICONDATA nid = {0};
-        nid.cbSize = sizeof(NOTIFYICONDATA);
+        NOTIFYICONDATAW nid = {0};
+
+        g_trayIconMustDestroy = FALSE;
+        nid.cbSize = sizeof(NOTIFYICONDATAW);
         nid.hWnd = hwnd;
         nid.uID = 1;
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = WM_TRAY;
-        nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-        lstrcpy(nid.szTip, TEXT("Mouse Dancing — em execução"));
-        if (!Shell_NotifyIcon(NIM_ADD, &nid)) {
+        nid.hIcon = LoadTrayIcon();
+        wcsncpy(nid.szTip, L"Mouse Dancing — em execução (clique para informações)", 127);
+        nid.szTip[127] = L'\0';
+        if (!Shell_NotifyIconW(NIM_ADD, &nid)) {
+            if (g_trayIconMustDestroy && nid.hIcon) {
+                DestroyIcon(nid.hIcon);
+                g_trayIconMustDestroy = FALSE;
+            }
             return -1;
         }
         g_nid = nid;
@@ -55,24 +125,36 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         return 0;
     case WM_TRAY:
-        if (lParam == WM_RBUTTONUP) {
+        if (lParam == WM_LBUTTONUP) {
+            ShowAbout(hwnd);
+        } else if (lParam == WM_RBUTTONUP) {
             POINT pt;
             HMENU hMenu;
+
             GetCursorPos(&pt);
             hMenu = CreatePopupMenu();
             if (!hMenu) {
                 break;
             }
-            AppendMenu(hMenu, MF_STRING, ID_MENU_EXIT, TEXT("Sair"));
+            AppendMenuW(hMenu, MF_STRING, ID_MENU_ABOUT, L"Sobre o Mouse Dancing…");
+            AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+            AppendMenuW(hMenu, MF_STRING, ID_MENU_EXIT, L"Sair");
             SetForegroundWindow(hwnd);
             TrackPopupMenu(hMenu, TPM_RIGHTALIGN | TPM_BOTTOMALIGN, pt.x, pt.y, 0, hwnd, NULL);
             DestroyMenu(hMenu);
-            PostMessage(hwnd, WM_NULL, 0, 0);
+            PostMessageW(hwnd, WM_NULL, 0, 0);
         }
         return 0;
     case WM_COMMAND:
-        if (LOWORD(wParam) == ID_MENU_EXIT) {
+        switch (LOWORD(wParam)) {
+        case ID_MENU_ABOUT:
+            ShowAbout(hwnd);
+            break;
+        case ID_MENU_EXIT:
             DestroyWindow(hwnd);
+            break;
+        default:
+            break;
         }
         return 0;
     case WM_DESTROY:
@@ -81,13 +163,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         PostQuitMessage(0);
         return 0;
     default:
-        return DefWindowProc(hwnd, msg, wParam, lParam);
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                   LPSTR lpCmdLine, int nCmdShow) {
-    WNDCLASS wc = {0};
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
+    WNDCLASSW wc = {0};
     HWND hwnd;
     MSG msg;
 
@@ -98,18 +179,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = kClassName;
-    if (!RegisterClass(&wc)) {
+    if (!RegisterClassW(&wc)) {
         return 1;
     }
 
-    hwnd = CreateWindowEx(0, kClassName, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+    hwnd = CreateWindowExW(0, kClassName, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
     if (!hwnd) {
         return 1;
     }
 
-    while (GetMessage(&msg, NULL, 0, 0) > 0) {
+    while (GetMessageW(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        DispatchMessageW(&msg);
     }
     return (int)msg.wParam;
 }
