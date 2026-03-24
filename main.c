@@ -1,6 +1,7 @@
 /*
- * Mouse Dancing — move o cursor 1px a cada 15s (ida e volta) e mostra ícone na bandeja.
- * Win32 apenas: user32 + shell32. Compilar sempre com UNICODE (ver build.bat).
+ * Mouse Dancing — move o rato a cada N ms (ida e volta) e mostra ícone na bandeja.
+ * Win32: SendInput (fallback SetCursorPos), SetThreadExecutionState para ecrã/sistema.
+ * Compilar sempre com UNICODE (ver build.bat).
  */
 #ifndef UNICODE
 #define UNICODE
@@ -16,26 +17,105 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <wchar.h>
-#if defined(__GNUC__) && !defined(_MSC_VER)
-#include <stdio.h>
-#endif
+#include <stdlib.h>
 
 #define WM_TRAY (WM_USER + 100)
 #define ID_TIMER_JIGGLE 1
 #define ID_MENU_ABOUT 2
 #define ID_MENU_EXIT 1
 
+#define INTERVAL_DEFAULT_MS 15000u
+#define INTERVAL_MIN_MS 5000u
+#define INTERVAL_MAX_MS 3600000u
+
 /* Alinhar com releases / instalador quando atualizares */
-#define MOUSE_DANCING_VERSION L"0.0.3"
+#define MOUSE_DANCING_VERSION L"0.0.4"
 
 static NOTIFYICONDATAW g_nid;
 static BOOL g_trayIconMustDestroy;
 static const wchar_t kClassName[] = L"MouseDancingTrayWnd";
+static UINT g_interval_ms = INTERVAL_DEFAULT_MS;
+static BOOL g_executionStateActive;
+
+static UINT ClampIntervalMs(unsigned long v) {
+    if (v < INTERVAL_MIN_MS) {
+        return INTERVAL_MIN_MS;
+    }
+    if (v > INTERVAL_MAX_MS) {
+        return INTERVAL_MAX_MS;
+    }
+    return (UINT)v;
+}
+
+static void InitIntervalMs(PWSTR lpCmdLine) {
+    wchar_t buf[48];
+    wchar_t *endptr;
+    unsigned long v;
+    const wchar_t *p;
+    DWORD n;
+
+    g_interval_ms = INTERVAL_DEFAULT_MS;
+    n = GetEnvironmentVariableW(L"MOUSEDANCING_INTERVAL_MS", buf, (DWORD)(sizeof(buf) / sizeof(buf[0])));
+    if (n > 0 && n < sizeof(buf) / sizeof(buf[0])) {
+        v = wcstoul(buf, &endptr, 10);
+        if (endptr != buf && *endptr == L'\0') {
+            g_interval_ms = ClampIntervalMs(v);
+            return;
+        }
+    }
+    if (!lpCmdLine || !*lpCmdLine) {
+        return;
+    }
+    p = wcsstr(lpCmdLine, L"/interval:");
+    if (!p) {
+        p = wcsstr(lpCmdLine, L"-interval:");
+    }
+    if (!p) {
+        p = wcsstr(lpCmdLine, L"--interval=");
+    }
+    if (!p) {
+        return;
+    }
+    if (p[0] == L'-' && p[1] == L'-') {
+        p += 11;
+    } else {
+        p += 10;
+    }
+    v = wcstoul(p, &endptr, 10);
+    if (endptr != p) {
+        g_interval_ms = ClampIntervalMs(v);
+    }
+}
+
+static void ApplyExecutionState(void) {
+    /* Ecrã/sistema: não substitui políticas de lock por GPO. */
+    if (SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)) {
+        g_executionStateActive = TRUE;
+    }
+}
+
+static void ClearExecutionState(void) {
+    if (g_executionStateActive) {
+        SetThreadExecutionState(ES_CONTINUOUS);
+        g_executionStateActive = FALSE;
+    }
+}
 
 static void JiggleOnce(void) {
+    INPUT input;
     POINT pt;
     static int dir = 1;
 
+    ZeroMemory(&input, sizeof(input));
+    input.type = INPUT_MOUSE;
+    input.mi.dx = dir;
+    input.mi.dy = 0;
+    input.mi.dwFlags = MOUSEEVENTF_MOVE;
+
+    if (SendInput(1, &input, sizeof(INPUT)) == 1) {
+        dir = -dir;
+        return;
+    }
     if (!GetCursorPos(&pt)) {
         return;
     }
@@ -74,23 +154,28 @@ static void RemoveTrayIcon(HWND hwnd) {
 }
 
 static void ShowAbout(HWND hwnd) {
-    wchar_t buf[768];
+    wchar_t buf[1024];
 
-    /* Literais em \\u — correctos em qualquer codepage do ficheiro; ver /utf-8 no build. */
 #if defined(_MSC_VER)
-    swprintf_s(buf, 768,
+    swprintf_s(buf, 1024,
                L"Estado: em execu\u00E7\u00E3o.\n\nVers\u00E3o: %ls\n\n"
-               L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
-               L"autom\u00E1tico do Windows por inatividade.\n\n"
+               L"Intervalo entre movimentos: %u s.\n\n"
+               L"Simula movimento do rato (SendInput; recurso ao cursor se necess\u00E1rio) para "
+               L"reduzir o bloqueio autom\u00E1tico por inatividade.\n\n"
+               L"Enquanto corre, pede ao sistema que n\u00E3o suspenda o ecr\u00E3 nem o sistema "
+               L"(dentro do que o Windows permitir).\n\n"
                L"Bot\u00E3o direito no \u00EDcone para Sair ou Sobre.",
-               MOUSE_DANCING_VERSION);
+               MOUSE_DANCING_VERSION, (unsigned)(g_interval_ms / 1000u));
 #else
-    swprintf(buf, 768,
+    swprintf(buf, 1024,
              L"Estado: em execu\u00E7\u00E3o.\n\nVers\u00E3o: %ls\n\n"
-             L"O cursor move 1 pixel a cada 15 segundos (ida e volta) para reduzir o bloqueio "
-             L"autom\u00E1tico do Windows por inatividade.\n\n"
+             L"Intervalo entre movimentos: %u s.\n\n"
+             L"Simula movimento do rato (SendInput; recurso ao cursor se necess\u00E1rio) para "
+             L"reduzir o bloqueio autom\u00E1tico por inatividade.\n\n"
+             L"Enquanto corre, pede ao sistema que n\u00E3o suspenda o ecr\u00E3 nem o sistema "
+             L"(dentro do que o Windows permitir).\n\n"
              L"Bot\u00E3o direito no \u00EDcone para Sair ou Sobre.",
-             MOUSE_DANCING_VERSION);
+             MOUSE_DANCING_VERSION, (unsigned)(g_interval_ms / 1000u));
 #endif
     MessageBoxW(hwnd, buf, L"Mouse Dancing", MB_ICONINFORMATION | MB_OK);
 }
@@ -119,7 +204,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             return -1;
         }
         g_nid = nid;
-        SetTimer(hwnd, ID_TIMER_JIGGLE, 15000, NULL);
+        ApplyExecutionState();
+        SetTimer(hwnd, ID_TIMER_JIGGLE, g_interval_ms, NULL);
         return 0;
     }
     case WM_TIMER:
@@ -162,6 +248,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     case WM_DESTROY:
         KillTimer(hwnd, ID_TIMER_JIGGLE);
+        ClearExecutionState();
         RemoveTrayIcon(hwnd);
         PostQuitMessage(0);
         return 0;
@@ -176,8 +263,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
     MSG msg;
 
     (void)hPrevInstance;
-    (void)lpCmdLine;
     (void)nCmdShow;
+
+    InitIntervalMs(lpCmdLine);
 
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;

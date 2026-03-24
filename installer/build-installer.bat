@@ -14,7 +14,7 @@ if %ERRORLEVEL% neq 0 (
   exit /b 1
 )
 
-makensis /DAPP_VERSION=0.0.3 mousedancing.nsi
+makensis /DAPP_VERSION=0.0.4 mousedancing.nsi
 if %ERRORLEVEL% neq 0 exit /b 1
 echo OK: MouseDancing-Setup.exe
 exit /b 0

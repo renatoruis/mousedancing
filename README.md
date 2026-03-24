@@ -14,11 +14,19 @@
 
 ---
 
-Aplicação **mínima para Windows (64 bits)** que, em execução, **move o cursor um pixel de cada vez a cada 15 segundos** (ida e volta), para **atenuar o bloqueio automático** por inatividade.
+Aplicação **mínima para Windows (64 bits)** que, em execução, **simula movimento do rato a intervalos** (por omissão 15 s, configurável) e **pede ao sistema que não suspenda o ecrã nem o PC** (dentro do que o Windows permitir), para **atenuar o bloqueio automático** por inatividade e o apagar do ecrã.
 
 Foi feita **só** para isso: leituras longas, chamadas, renders, ou qualquer tarefa em que o ecrã ou a sessão não devam bloquear por falta de “movimento”.
 
 > **Aviso:** não contorna políticas de TI nem garante bloqueio zero — depende das definições do Windows, da rede e da organização.
+
+## Ambientes corporativos
+
+Em **domínio Windows**, **políticas de grupo (GPO)** e outras regras da organização podem restringir executáveis, início automático ou o comportamento da sessão. **Qualquer exceção ou alteração pode exigir aprovação explícita de TI.** O aviso acima mantém-se: **não contornes políticas de TI** nem uses isto para contornar regras da empresa.
+
+**Como isto se compara com outras abordagens no Windows:** há uma diferença prática entre **pedir ao sistema para não suspender o ecrã ou o computador** (`SetThreadExecutionState`, sujeito a política e contexto) e **influenciar o temporizador de inatividade** (entrada simulada via `SendInput`). O Mouse Dancing **usa ambos** enquanto corre: `SendInput` (com recurso ao cursor se falhar) para o eixo de “atividade”, e `SetThreadExecutionState` para **atenuar** apagar ecrã/suspensão — **sem garantir** que nada disto contorne políticas de domínio, EDR ou regras da empresa.
+
+**Antivírus / EDR:** se o `.exe` for bloqueado, colocado em quarentena ou sinalizado, o caminho adequado é **pedir uma exceção** à equipa de segurança ou **um build assinado pela empresa** — não contornes controlos sem autorização.
 
 ## Funcionalidades
 
@@ -27,7 +35,7 @@ Foi feita **só** para isso: leituras longas, chamadas, renders, ou qualquer tar
 | **Bandeja do sistema** | Ícone do sistema (timer/info); **clique esquerdo** abre “Sobre” com estado e versão; **clique direito** para Sobre ou Sair |
 | **Instalador** | `MouseDancing-Setup.exe` (NSIS): pasta em `%LOCALAPPDATA%`, **início automático**, entrada em *Aplicações instaladas* |
 | **Portátil** | `mousedancing.exe` — um ficheiro, sem instalador |
-| **Stack** | C, Win32 (`user32`, `shell32`), sem *runtime* extra |
+| **Stack** | C, Win32 (`user32`, `shell32`, `kernel32`), sem *runtime* extra |
 
 ## Download (recomendado)
 
@@ -63,6 +71,13 @@ Na mesma release: **`mousedancing.exe`** — copiar e executar; **não** regista
 2. **Clique direito** → **Sobre o Mouse Dancing…** ou **Sair**  
 3. Instalação via Setup → **Desinstalar** em *Definições → Aplicações*
 
+### Intervalo entre movimentos
+
+O intervalo por omissão está definido no código (por exemplo, 15 segundos). Podes definir o período em **milissegundos** através de:
+
+- variável de ambiente **`MOUSEDANCING_INTERVAL_MS`**
+- linha de comandos, em qualquer uma destas formas: **`/interval:NNNN`**, **`-interval:NNNN`**, **`--interval=NNNN`** (substitui `NNNN` pelo valor em ms)
+
 ## Compilar (sem dependências em runtime)
 
 Na raiz do projeto, no Windows:
@@ -73,7 +88,7 @@ build.bat
 
 Gera `mousedancing.exe`. É preciso **Visual Studio** (`cl`) ou **MinGW-w64** (`gcc`), **64 bits**. O `build.bat` usa **`/utf-8`** no MSVC e charset UTF-8 no GCC para textos em português (acentos) aparecerem bem.
 
-Em releases, alinha a macro **`MOUSE_DANCING_VERSION`** em `main.c` com a tag (ex.: `v0.0.2` → `L"0.0.2"`).
+Em releases, alinha a macro **`MOUSE_DANCING_VERSION`** em `main.c` com a tag (ex.: `v0.0.4` → `L"0.0.4"`).
 
 ### Instalador local
 
